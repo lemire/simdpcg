@@ -10,6 +10,8 @@ part of this family. It is written in C. The implementation uses Intel's SIMD
 instructions and is based on O'Neill's original (pure C) implementation.
 
 The vectorized version is at least twice a fast on a recent Intel processor.
+In some tests, it is about as fast as a [vectorized version xorshift128+](https://github.com/lemire/SIMDxorshift).
+
 
 ## Prerequisite
 
