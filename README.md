@@ -33,6 +33,20 @@ avx512_pcg32_random_t key = {
 __m256i randomstuff =  avx512_pcg32_random_r(&mykey);
 ```
 
+## Sample result
+
+```
+Generating 50000 32-bit random numbers
+Time reported in number of cycles per array element.
+We store values to an array of size = 195 kB.
+
+We just generate the random numbers:
+populateRandom_pcg32(prec, size):  4.25 cycles per operation
+populateRandom_avx512_pcg32(prec, size):  2.37 cycles per operation
+populateRandom_avx512_pcg32_two(prec, size):  1.21 cycles per operation
+populateRandom_avx512_pcg32_four(prec, size):  1.14 cycles per operation
+```
+
 ## Usage 
 
 ```bash
