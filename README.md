@@ -9,6 +9,7 @@ We present   a vectorized version of PCG32, a popular random-number generator
 part of this family. It is written in C. The implementation uses Intel's SIMD
 instructions and is based on O'Neill's original (pure C) implementation.
 
+The vectorized version is at least twice a fast on a recent Intel processor.
 
 ## Prerequisite
 

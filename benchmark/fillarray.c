@@ -5,6 +5,7 @@
 #include "pcg32.h"
 #include "simdpcg32.h"
 
+static uint32_t counter;
 void populateRandom_pcg32(uint32_t *answer, uint32_t size) {
   pcg32_random_t key = {
       .state = 324,
@@ -12,6 +13,7 @@ void populateRandom_pcg32(uint32_t *answer, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
     answer[i] = pcg32_random_r(&key);
   }
+  counter += answer[size-1];
 }
 
 #ifdef AVX512PCG
@@ -33,6 +35,7 @@ void populateRandom_avx512_pcg32(uint32_t *answer, uint32_t size) {
     _mm256_storeu_si256((__m256i *)buffer, r);
     memcpy(answer + i, buffer, sizeof(uint32_t) * (size - i));
   }
+  counter += answer[size-1];
 }
 #endif
 
@@ -90,6 +93,7 @@ void populateRandom_avx512_pcg32(uint32_t *answer, uint32_t size) {
   } while (0)
 
 void demo(int size) {
+  counter = 0;
   printf("Generating %d 32-bit random numbers \n", size);
   printf("Time reported in number of cycles per array element.\n");
   printf("We store values to an array of size = %lu kB.\n",
@@ -104,7 +108,7 @@ void demo(int size) {
   printf("AVX512 not enabled!\n");
 #endif
   free(prec);
-  printf("\n");
+  printf(" %d \n", (int) counter);
 }
 
 int main() {
