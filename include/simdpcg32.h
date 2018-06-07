@@ -40,8 +40,7 @@ static inline __m256i avx512_pcg32_random_r(avx512_pcg32_random_t *rng) {
   __m512i xorshifted = _mm512_srli_epi64(
       _mm512_xor_epi64(_mm512_srli_epi64(oldstate, 18), oldstate), 27);
   __m512i rot = _mm512_srli_epi64(oldstate, 59);
-  return _mm512_cvtepi64_epi32(_mm512_or_epi32(
-      _mm512_srav_epi32(xorshifted, rot), _mm512_sllv_epi32(xorshifted, rot)));
+  return _mm512_cvtepi64_epi32(_mm512_rorv_epi32(xorshifted,rot));
 }
 
 #endif
