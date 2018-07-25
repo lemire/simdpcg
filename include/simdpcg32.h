@@ -110,6 +110,52 @@ static inline __m256i avx2_pcg32_random_r(avx2_pcg32_random_t *rng) {
 
   return result;
 }
+
+typedef struct avx256_pcg_state_setseq_64 { // Internals are *Private*.
+  __m256i state; // (8x64bits) RNG state.  All values are possible.
+  __m256i inc;   // (8x64bits)Controls which RNG sequences (stream) is
+                 // selected. Must *always* be odd. You probably want
+                 // distinct sequences
+  __m256i
+      pcg32_mult_l; // set to _mm256_set1_epi64x(UINT64_C(0x5851f42d4c957f2d) &
+                    // 0xffffffff)
+  __m256i
+      pcg32_mult_h; // set to _mm256_set1_epi64x(UINT64_C(0x5851f42d4c957f2d) >>
+                    // 32)
+
+} avx256_pcg32_random_t;
+
+// untested
+static inline __m256i hacked_mm256_rorv_epi32(__m256i x, __m256i r) {
+  return _mm256_or_si256(
+      _mm256_sllv_epi32(x, _mm256_sub_epi32(_mm256_set1_epi32(32), r)),
+      _mm256_srlv_epi32(x, r));
+}
+
+// untested
+static inline __m256i hacked_mm256_mullo_epi64(__m256i x, __m256i ml,
+                                               __m256i mh) {
+  __m256i xl =
+      _mm256_and_si256(x, _mm256_set1_epi64x(UINT64_C(0x00000000ffffffff)));
+  __m256i xh = _mm256_srli_epi64(x, 32);
+  __m256i hl = _mm256_srli_epi64(_mm256_mul_epu32(xh, ml), 32);
+  __m256i lh = _mm256_srli_epi64(_mm256_mul_epu32(xl, mh), 32);
+  __m256i hh = _mm256_mul_epu32(xh, mh);
+  return _mm256_add_epi64(hh, _mm256_add_epi64(hl, lh));
+}
+static inline __m128i avx256_pcg32_random_r(avx256_pcg32_random_t *rng) {
+  __m256i oldstate = rng->state;
+  rng->state =
+      _mm256_add_epi64(hacked_mm256_mullo_epi64(rng->state, rng->pcg32_mult_l,
+                                                rng->pcg32_mult_h),
+                       rng->inc);
+  __m256i xorshifted = _mm256_srli_epi64(
+      _mm256_xor_si256(_mm256_srli_epi64(oldstate, 18), oldstate), 27);
+  __m256i rot = _mm256_srli_epi64(oldstate, 59);
+  return _mm256_castsi256_si128(
+      _mm256_permutevar8x32_epi32(hacked_mm256_rorv_epi32(xorshifted, rot),
+                                  _mm256_set_epi32(7, 7, 7, 7, 6, 4, 2, 0)));
+}
 #endif
 
 #if defined(__AVX512F__) && defined(__AVX512DQ__)
@@ -132,6 +178,29 @@ static inline __m256i avx512_pcg32_random_r(avx512_pcg32_random_t *rng) {
   return _mm512_cvtepi64_epi32(_mm512_rorv_epi32(xorshifted, rot));
 }
 
+typedef struct avx512bis_pcg_state_setseq_64 { // Internals are *Private*.
+  __m512i state[2];   // (8x64bits) RNG state.  All values are possible.
+  __m512i inc[2];     // (8x64bits)Controls which RNG sequences (stream) is
+                      // selected. Must *always* be odd. You probably want
+                      // distinct sequences
+  __m512i multiplier; // set to _mm512_set1_epi64(0x5851f42d4c957f2d);
+} avx512_pcg32_random_t;
+
+static inline __m512i avx512bis_pcg32_random_r(avx512_pcg32_random_t *rng) {
+  __m512i oldstate0 = rng->state[0];
+  __m512i oldstate1 = rng->state[1];
+  __m512i lowstates = _mm512_unpacklo_epi32(oldstate1, oldstate0);
+
+  rng->state[0] = _mm512_add_epi64(
+      _mm512_mullo_epi64(rng->multiplier, rng->state[0]), rng->inc[1]);
+  rng->state[1] = _mm512_add_epi64(
+      _mm512_mullo_epi64(rng->multiplier, rng->state[1]), rng->inc[1]);
+
+  __m512i xorshifted = _mm512_srli_epi64(
+      _mm512_xor_epi64(_mm512_srli_epi64(lowstates, 18), lowstates), 27);
+  __m512i rot = _mm512_srli_epi64(lowstates, 59);
+  return _mm512_rorv_epi32(xorshifted, rot);
+}
 #endif
 
 #endif
