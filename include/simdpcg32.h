@@ -186,6 +186,8 @@ typedef struct avx512bis_pcg_state_setseq_64 { // Internals are *Private*.
   __m512i multiplier; // set to _mm512_set1_epi64(0x5851f42d4c957f2d);
 } avx512bis_pcg32_random_t;
 
+
+// we do the rotate using 32 bits, not the full 64 bits
 static inline __m512i avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   __m512i oldstate0 = rng->state[0];
   __m512i oldstate1 = rng->state[1];
