@@ -184,9 +184,9 @@ typedef struct avx512bis_pcg_state_setseq_64 { // Internals are *Private*.
                       // selected. Must *always* be odd. You probably want
                       // distinct sequences
   __m512i multiplier; // set to _mm512_set1_epi64(0x5851f42d4c957f2d);
-} avx512_pcg32_random_t;
+} avx512bis_pcg32_random_t;
 
-static inline __m512i avx512bis_pcg32_random_r(avx512_pcg32_random_t *rng) {
+static inline __m512i avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   __m512i oldstate0 = rng->state[0];
   __m512i oldstate1 = rng->state[1];
   __m512i lowstates = _mm512_unpacklo_epi32(oldstate1, oldstate0);

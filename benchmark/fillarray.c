@@ -280,7 +280,7 @@ void populateRandom_avx512_pcg32(uint32_t *answer, uint32_t size) {
 
 void populateRandom_avx512bis_pcg32(uint32_t *answer, uint32_t size) {
   uint32_t i = 0;
-  avx512_pcg32_random_t key = {
+  avx512bis_pcg32_random_t key = {
       .state = {_mm512_set1_epi64(1111), _mm512_set1_epi64(2222)},
       .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
               _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
@@ -294,12 +294,103 @@ void populateRandom_avx512bis_pcg32(uint32_t *answer, uint32_t size) {
   if (i < size) {
     __m512i r = avx512bis_pcg32_random_r(&key);
     uint32_t buffer[16];
-    _mm512_storeu_si256((__m512i *)buffer, r);
+    _mm512_storeu_si512((__m512i *)buffer, r);
     memcpy(answer + i, buffer, sizeof(uint32_t) * (size - i));
   }
   counter += answer[size - 1];
 }
 
+void populateRandom_avx512bis_pcg32_two(uint32_t *answer, uint32_t size) {
+  uint32_t i = 0;
+  avx512bis_pcg32_random_t key1 = {
+      .state = {_mm512_set1_epi64(1111), _mm512_set1_epi64(2222)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  avx512bis_pcg32_random_t key2 = {
+      .state = {_mm512_set1_epi64(3333), _mm512_set1_epi64(4444)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  if (size >= 32) {
+    for (; i < size - 32; i += 32) {
+      __m512i r1 = avx512bis_pcg32_random_r(&key1);
+      __m512i r2 = avx512bis_pcg32_random_r(&key2);
+      _mm512_storeu_si512((__m512i *)(answer + i), r1);
+      _mm512_storeu_si512((__m512i *)(answer + i + 16), r2);
+    }
+  }
+  if (size >= 16) {
+    for (; i < size - 16; i += 16) {
+      __m512i r = avx512bis_pcg32_random_r(&key1);
+      _mm512_storeu_si512((__m512i *)(answer + i), r);
+    }
+  }
+  if (i < size) {
+    __m512i r = avx512bis_pcg32_random_r(&key1);
+    uint32_t buffer[16];
+    _mm512_storeu_si512((__m512i *)buffer, r);
+    memcpy(answer + i, buffer, sizeof(uint32_t) * (size - i));
+  }
+  counter += answer[size - 1];
+}
+
+void populateRandom_avx512bis_pcg32_four(uint32_t *answer, uint32_t size) {
+  uint32_t i = 0;
+  avx512bis_pcg32_random_t key1 = {
+      .state = {_mm512_set1_epi64(1111), _mm512_set1_epi64(2222)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  avx512bis_pcg32_random_t key2 = {
+      .state = {_mm512_set1_epi64(3333), _mm512_set1_epi64(4444)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  avx512bis_pcg32_random_t key3 = {
+      .state = {_mm512_set1_epi64(5555), _mm512_set1_epi64(6666)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  avx512bis_pcg32_random_t key4 = {
+      .state = {_mm512_set1_epi64(7777), _mm512_set1_epi64(8888)},
+      .inc = {_mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1),
+              _mm512_set_epi64(155, 135, 115, 95, 75, 55, 35, 15)},
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+  if (size >= 64) {
+    for (; i < size - 64; i += 64) {
+      __m512i r1 = avx512bis_pcg32_random_r(&key1);
+      __m512i r2 = avx512bis_pcg32_random_r(&key2);
+      __m512i r3 = avx512bis_pcg32_random_r(&key3);
+      __m512i r4 = avx512bis_pcg32_random_r(&key4);
+      _mm512_storeu_si512((__m512i *)(answer + i), r1);
+      _mm512_storeu_si512((__m512i *)(answer + i + 16), r2);
+      _mm512_storeu_si512((__m512i *)(answer + i + 32), r3);
+      _mm512_storeu_si512((__m512i *)(answer + i + 48), r4);
+    }
+  }
+  if (size >= 32) {
+    for (; i < size - 32; i += 32) {
+      __m512i r1 = avx512bis_pcg32_random_r(&key1);
+      __m512i r2 = avx512bis_pcg32_random_r(&key2);
+      _mm512_storeu_si512((__m512i *)(answer + i), r1);
+      _mm512_storeu_si512((__m512i *)(answer + i + 16), r2);
+    }
+  }
+  if (size >= 16) {
+    for (; i < size - 16; i += 16) {
+      __m512i r = avx512bis_pcg32_random_r(&key1);
+      _mm512_storeu_si512((__m512i *)(answer + i), r);
+    }
+  }
+  if (i < size) {
+    __m512i r = avx512bis_pcg32_random_r(&key1);
+    uint32_t buffer[16];
+    _mm512_storeu_si512((__m512i *)buffer, r);
+    memcpy(answer + i, buffer, sizeof(uint32_t) * (size - i));
+  }
+  counter += answer[size - 1];
+}
 void populateRandom_avx512_pcg32_two(uint32_t *answer, uint32_t size) {
   uint32_t i = 0;
   avx512_pcg32_random_t key1 = {
@@ -465,6 +556,8 @@ void demo(int size) {
   BEST_TIME(populateRandom_avx512_pcg32_two(prec, size), , repeat, size);
   BEST_TIME(populateRandom_avx512_pcg32_four(prec, size), , repeat, size);
   BEST_TIME(populateRandom_avx512bis_pcg32(prec, size), , repeat, size);
+  BEST_TIME(populateRandom_avx512bis_pcg32_two(prec, size), , repeat, size);
+  BEST_TIME(populateRandom_avx512bis_pcg32_four(prec, size), , repeat, size);
 
 #else
   printf("\nAVX512 not enabled!\n");
