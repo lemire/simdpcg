@@ -138,11 +138,12 @@ static inline __m256i hacked_mm256_mullo_epi64(__m256i x, __m256i ml,
   __m256i xl =
       _mm256_and_si256(x, _mm256_set1_epi64x(UINT64_C(0x00000000ffffffff)));
   __m256i xh = _mm256_srli_epi64(x, 32);
-  __m256i hl = _mm256_srli_epi64(_mm256_mul_epu32(xh, ml), 32);
-  __m256i lh = _mm256_srli_epi64(_mm256_mul_epu32(xl, mh), 32);
-  __m256i hh = _mm256_mul_epu32(xh, mh);
-  return _mm256_add_epi64(hh, _mm256_add_epi64(hl, lh));
+  __m256i hl = _mm256_slli_epi64(_mm256_mul_epu32(xh, ml), 32);
+  __m256i lh = _mm256_slli_epi64(_mm256_mul_epu32(xl, mh), 32);
+  __m256i ll = _mm256_mul_epu32(xl, ml);
+  return _mm256_add_epi64(ll, _mm256_add_epi64(hl, lh));
 }
+
 static inline __m128i avx256_pcg32_random_r(avx256_pcg32_random_t *rng) {
   __m256i oldstate = rng->state;
   rng->state =
