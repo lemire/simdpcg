@@ -195,7 +195,7 @@ static inline __m512i avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   __m512i lowstates = _mm512_unpacklo_epi32(oldstate1, oldstate0);
 
   rng->state[0] = _mm512_add_epi64(
-      _mm512_mullo_epi64(rng->multiplier, rng->state[0]), rng->inc[1]);
+      _mm512_mullo_epi64(rng->multiplier, rng->state[0]), rng->inc[0]);
   rng->state[1] = _mm512_add_epi64(
       _mm512_mullo_epi64(rng->multiplier, rng->state[1]), rng->inc[1]);
 
