@@ -11,12 +11,16 @@ endif # debug
 HEADERS=include/simdpcg32.h  include/pcg32.h 
 
 
-all: fillarray 
+all: fillarray unit
 
 fillarray: ./benchmark/fillarray.c $(HEADERS) 
 	$(CC) $(CFLAGS) -o fillarray ./benchmark/fillarray.c  -Iinclude
 
+unit: ./tests/unit.c $(HEADERS)
+	$(CC) $(CFLAGS) -o unit ./tests/unit.c  -Iinclude -lm
 
+test: unit
+	./unit
 
 clean:
-	rm -f  fillarray 
+	rm -f  fillarray unit
