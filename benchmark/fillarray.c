@@ -9,7 +9,7 @@ static uint32_t counter;
 void populateRandom_pcg32(uint32_t *answer, uint32_t size) {
   pcg32_random_t key = {
       .state = 324,
-      .inc = 4444}; // I am a crazy man using bleeding-edge C99 in 2018
+      .inc = 15}; // I am a crazy man using bleeding-edge C99 in 2018
   for (uint32_t i = 0; i < size; i++) {
     answer[i] = pcg32_random_r(&key);
   }
