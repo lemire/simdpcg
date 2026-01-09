@@ -185,6 +185,8 @@ typedef struct avx512bis_pcg_state_setseq_64 { // Internals are *Private*.
                       // selected. Must *always* be odd. You probably want
                       // distinct sequences
   __m512i multiplier; // set to _mm512_set1_epi64(0x5851f42d4c957f2d);
+  __m512i pack_idx;   // set to 30 28 26 24 22 20 18 16 (high from xs1/rot1)
+                      //        14 12 10  8  6  4  2  0 (low from xs0/rot0)
 } avx512bis_pcg32_random_t;
 
 static inline __m512i
@@ -197,16 +199,15 @@ avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   rng->state[1] = _mm512_add_epi64(
       _mm512_mullo_epi64(rng->multiplier, rng->state[1]), rng->inc[1]);
 
-  __m512i xorshifted0 = _mm512_srli_epi64(
+  __m512i xs0 = _mm512_srli_epi64(
       _mm512_xor_epi64(_mm512_srli_epi64(oldstate0, 18), oldstate0), 27);
   __m512i rot0 = _mm512_srli_epi64(oldstate0, 59);
-  __m512i xorshifted1 = _mm512_srli_epi64(
+  __m512i xs1 = _mm512_srli_epi64(
       _mm512_xor_epi64(_mm512_srli_epi64(oldstate1, 18), oldstate1), 27);
   __m512i rot1 = _mm512_srli_epi64(oldstate1, 59);
-  return _mm512_inserti32x8(
-      _mm512_castsi256_si512(
-          _mm512_cvtepi64_epi32(_mm512_rorv_epi32(xorshifted0, rot0))),
-      _mm512_cvtepi64_epi32(_mm512_rorv_epi32(xorshifted1, rot1)), 1);
+  __m512i xs_packed  = _mm512_permutex2var_epi32(xs0, rng->pack_idx, xs1);
+  __m512i rot_packed = _mm512_permutex2var_epi32(rot0, rng->pack_idx, rot1);
+  return _mm512_rorv_epi32(xs_packed, rot_packed);
 }
 #endif
 

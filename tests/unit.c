@@ -95,7 +95,9 @@ void check_uniform_bis() {
                                0xf3565f35a9c61d00, 0xd3c83f29b30df640,
                                0x14b7f7e4c89630fa, 0x37cc7c0347694551,
                                0x4a052332d95d485b, 0x10f4ade77a26e15e)},
-      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d)};
+      .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d),
+      .pack_idx = _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16,
+                                   14, 12, 10,  8,  6,  4,  2,  0)};
   size_t *bitset1 = (uint64_t *)malloc((1 << 16) * sizeof(size_t));
   size_t *bitset2 = (uint64_t *)malloc((1 << 16) * sizeof(size_t));
   memset(bitset1, 0, (1 << 16) * sizeof(size_t));
