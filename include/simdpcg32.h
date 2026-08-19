@@ -39,6 +39,24 @@ typedef struct avx2_pcg_state_setseq_64 {
 
 } avx2_pcg32_random_t;
 
+static inline void avx2_pcg32_initialize(avx2_pcg32_random_t *rng,
+                                         uint64_t state, uint64_t inc) {
+  const uint64_t multiplier = 0x5851f42d4c957f2d;
+  uint64_t inc_sum = 0;
+  uint64_t multiplier_prod = 1;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t *)&rng->state)[i] = state;
+    state = state * multiplier + inc;
+    inc_sum = inc_sum * multiplier + inc;
+    multiplier_prod *= multiplier;
+  }
+  rng->inc[0] = _mm256_set1_epi64x(
+      inc_sum); // TODO: shall we drop the second `inc` attribute?
+  rng->inc[1] = _mm256_set1_epi64x(inc_sum);
+  rng->pcg32_mult_l = _mm256_set1_epi64x(multiplier_prod & 0xffffffff);
+  rng->pcg32_mult_h = _mm256_set1_epi64x(multiplier_prod >> 32);
+}
+
 // credit Wenzel Jakob
 // https://github.com/wjakob/pcg32/blob/master/pcg32_8.h
 static inline __m256i avx2_pcg32_random_r(avx2_pcg32_random_t *rng) {
@@ -125,6 +143,22 @@ typedef struct avx256_pcg_state_setseq_64 { // Internals are *Private*.
 
 } avx256_pcg32_random_t;
 
+static inline void avx256_pcg32_initialize(avx256_pcg32_random_t *rng,
+                                           uint64_t state, uint64_t inc) {
+  const uint64_t multiplier = 0x5851f42d4c957f2d;
+  uint64_t inc_sum = 0;
+  uint64_t multiplier_prod = 1;
+  for (int i = 0; i < 4; i++) {
+    ((uint64_t *)&rng->state)[i] = state;
+    state = state * multiplier + inc;
+    inc_sum = inc_sum * multiplier + inc;
+    multiplier_prod *= multiplier;
+  }
+  rng->inc = _mm256_set1_epi64x(inc_sum);
+  rng->pcg32_mult_l = _mm256_set1_epi64x(multiplier_prod & 0xffffffff);
+  rng->pcg32_mult_h = _mm256_set1_epi64x(multiplier_prod >> 32);
+}
+
 // untested
 static inline __m256i hacked_mm256_rorv_epi32(__m256i x, __m256i r) {
   return _mm256_or_si256(
@@ -169,6 +203,21 @@ typedef struct avx512_pcg_state_setseq_64 { // Internals are *Private*.
   __m512i multiplier; // set to _mm512_set1_epi64(0x5851f42d4c957f2d);
 } avx512_pcg32_random_t;
 
+static inline void avx512_pcg32_initialize(avx512_pcg32_random_t *rng,
+                                           uint64_t state, uint64_t inc) {
+  const uint64_t multiplier = 0x5851f42d4c957f2d;
+  uint64_t inc_sum = 0;
+  uint64_t multiplier_prod = 1;
+  for (int i = 0; i < 8; i++) {
+    ((uint64_t *)&rng->state)[i] = state;
+    state = state * multiplier + inc;
+    inc_sum = inc_sum * multiplier + inc;
+    multiplier_prod *= multiplier;
+  }
+  rng->inc = _mm512_set1_epi64(inc_sum);
+  rng->multiplier = _mm512_set1_epi64(multiplier_prod);
+}
+
 static inline __m256i avx512_pcg32_random_r(avx512_pcg32_random_t *rng) {
   __m512i oldstate = rng->state;
   rng->state = _mm512_add_epi64(_mm512_mullo_epi64(rng->multiplier, rng->state),
@@ -189,8 +238,26 @@ typedef struct avx512bis_pcg_state_setseq_64 { // Internals are *Private*.
                       //        14 12 10  8  6  4  2  0 (low from xs0/rot0)
 } avx512bis_pcg32_random_t;
 
-static inline __m512i
-avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
+static inline void avx512bis_pcg32_initialize(avx512bis_pcg32_random_t *rng,
+                                              uint64_t state, uint64_t inc) {
+  const uint64_t multiplier = 0x5851f42d4c957f2d;
+  uint64_t inc_sum = 0;
+  uint64_t multiplier_prod = 1;
+  for (int i = 0; i < 16; i++) {
+    ((uint64_t *)&rng->state)[i] = state;
+    state = state * multiplier + inc;
+    inc_sum = inc_sum * multiplier + inc;
+    multiplier_prod *= multiplier;
+  }
+  rng->inc[0] = _mm512_set1_epi64(
+      inc_sum); // TODO: shall we drop the second `inc` attribute?
+  rng->inc[1] = _mm512_set1_epi64(inc_sum);
+  rng->multiplier = _mm512_set1_epi64(multiplier_prod);
+  rng->pack_idx = _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,
+                                   8, 6, 4, 2, 0);
+}
+
+static inline __m512i avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   __m512i oldstate0 = rng->state[0];
   __m512i oldstate1 = rng->state[1];
 
@@ -205,7 +272,7 @@ avx512bis_pcg32_random_r(avx512bis_pcg32_random_t *rng) {
   __m512i xs1 = _mm512_srli_epi64(
       _mm512_xor_epi64(_mm512_srli_epi64(oldstate1, 18), oldstate1), 27);
   __m512i rot1 = _mm512_srli_epi64(oldstate1, 59);
-  __m512i xs_packed  = _mm512_permutex2var_epi32(xs0, rng->pack_idx, xs1);
+  __m512i xs_packed = _mm512_permutex2var_epi32(xs0, rng->pack_idx, xs1);
   __m512i rot_packed = _mm512_permutex2var_epi32(rot0, rng->pack_idx, rot1);
   return _mm512_rorv_epi32(xs_packed, rot_packed);
 }
