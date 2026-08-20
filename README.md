@@ -24,10 +24,10 @@ You should have a recent Intel processor (Skylake-X or better) support AVX-512 i
 #include "simdpcg32.h"
 
 // create a new key
-avx512_pcg32_random_t key = {
-    .state = _mm512_set_epi64(0xb5f380a45f908741, 0x88b545898d45385d, 0xd81c7fe764f8966c, 0x44a9a3b6b119e7bc, 0x3cb6e04dc22f629, 0x727947debc931183, 0xfbfa8fdcff91891f, 0xb9384fd8f34c0f49),
-    .inc = _mm512_set_epi64(0xbf2de0670ac3d03e, 0x98c40c0dc94e71e, 0xf3565f35a8c61d00, 0xd3c83e29b30df640, 0x14b7f6e4c89630fa, 0x37cc7b0347694551, 0x4a052322d95d485b, 0x10f3ade77a26e15e),
-      .multiplier =  _mm512_set1_epi64(0x5851f42d4c957f2d)};
+avx512_pcg32_random_t key;
+uint64_t state = 0x4d595df4d0f33173;
+uint64_t inc = 0x14057b7ef767814f;
+avx512_pcg32_initialize(&key, state, inc);
 
 // generate 32 random bytes, do this as many times as you want
 __m256i randomstuff =  avx512_pcg32_random_r(&key);

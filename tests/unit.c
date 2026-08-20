@@ -1,3 +1,4 @@
+#include "pcg32.h"
 #include "simdpcg32.h"
 #include <math.h>
 #include <stdio.h>
@@ -96,8 +97,8 @@ void check_uniform_bis() {
                                0x14b7f7e4c89630fa, 0x37cc7c0347694551,
                                0x4a052332d95d485b, 0x10f4ade77a26e15e)},
       .multiplier = _mm512_set1_epi64(0x5851f42d4c957f2d),
-      .pack_idx = _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16,
-                                   14, 12, 10,  8,  6,  4,  2,  0)};
+      .pack_idx = _mm512_set_epi32(30, 28, 26, 24, 22, 20, 18, 16, 14, 12, 10,
+                                   8, 6, 4, 2, 0)};
   size_t *bitset1 = (uint64_t *)malloc((1 << 16) * sizeof(size_t));
   size_t *bitset2 = (uint64_t *)malloc((1 << 16) * sizeof(size_t));
   memset(bitset1, 0, (1 << 16) * sizeof(size_t));
@@ -140,9 +141,89 @@ void check_uniform_bis() {
   free(bitset2);
 }
 
+void check_identity() {
+
+  size_t N = 1 << 16;
+  uint64_t state = 0x4d595df4d0f33173;
+  uint64_t inc = 0x14057b7ef767814f;
+
+  uint32_t *buf_ref = (uint32_t *)malloc(N * sizeof(uint32_t));
+  uint32_t *buf_avx = (uint32_t *)malloc(N * sizeof(uint32_t));
+
+  // Reference C implementation
+  pcg32_random_t rng_ref = {.state = state, .inc = inc};
+  for (size_t i = 0; i < N; i++) {
+    buf_ref[i] = pcg32_random_r(&rng_ref);
+  }
+
+  // AVX2
+  avx2_pcg32_random_t rng_avx2;
+  avx2_pcg32_initialize(&rng_avx2, state, inc);
+  for (size_t i = 0; i < N; i += 8) {
+    _mm256_storeu_si256((__m256i *)(buf_avx + i),
+                        avx2_pcg32_random_r(&rng_avx2));
+  }
+  for (size_t i = 0; i < N; i++) {
+    if (buf_ref[i] != buf_avx[i]) {
+      printf("%zu : %u != %u\n", i, buf_ref[i], buf_avx[i]);
+      abort();
+    }
+  }
+  printf("avx2 matches reference\n");
+
+  // AVX256
+  avx256_pcg32_random_t rng_avx256;
+  avx256_pcg32_initialize(&rng_avx256, state, inc);
+  for (size_t i = 0; i < N; i += 4) {
+    _mm_storeu_si128((__m128i *)(buf_avx + i),
+                     avx256_pcg32_random_r(&rng_avx256));
+  }
+  for (size_t i = 0; i < N; i++) {
+    if (buf_ref[i] != buf_avx[i]) {
+      printf("%zu : %u != %u\n", i, buf_ref[i], buf_avx[i]);
+      abort();
+    }
+  }
+  printf("avx256 matches reference\n");
+
+  // AVX512
+  avx512_pcg32_random_t rng_avx512;
+  avx512_pcg32_initialize(&rng_avx512, state, inc);
+  for (size_t i = 0; i < N; i += 8) {
+    _mm256_storeu_si256((__m256i *)(buf_avx + i),
+                        avx512_pcg32_random_r(&rng_avx512));
+  }
+  for (size_t i = 0; i < N; i++) {
+    if (buf_ref[i] != buf_avx[i]) {
+      printf("%zu : %u != %u\n", i, buf_ref[i], buf_avx[i]);
+      abort();
+    }
+  }
+  printf("avx512 matches reference\n");
+
+  // AVX512bis
+  avx512bis_pcg32_random_t rng_avx512bis;
+  avx512bis_pcg32_initialize(&rng_avx512bis, state, inc);
+  for (size_t i = 0; i < N; i += 16) {
+    _mm512_storeu_si512((__m512i *)(buf_avx + i),
+                        avx512bis_pcg32_random_r(&rng_avx512bis));
+  }
+  for (size_t i = 0; i < N; i++) {
+    if (buf_ref[i] != buf_avx[i]) {
+      printf("%zu : %u != %u\n", i, buf_ref[i], buf_avx[i]);
+      abort();
+    }
+  }
+  printf("avx512bis matches reference\n");
+
+  free(buf_ref);
+  free(buf_avx);
+}
+
 int main() {
   printafew();
   check_uniform();
   check_uniform_bis();
+  check_identity();
   return EXIT_SUCCESS;
 }
